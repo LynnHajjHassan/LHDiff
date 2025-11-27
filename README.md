@@ -7,6 +7,8 @@
 src/
  ├── preprocessing/        # Line normalization, comment/whitespace handling
  ├── similarity/           # Levenshtein, cosine similarity, SimHash
+  ├── similarity_part1/                   
+  ├── similarity_part2/                 
  ├── mapping/              # Candidate matching, conflict resolution
  ├── split/                # Line split/merge detection
  ├── evaluation/           # Accuracy testing, benchmarks
