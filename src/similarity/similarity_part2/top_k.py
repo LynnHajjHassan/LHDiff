@@ -19,25 +19,19 @@ def top_k_candidates(left_lines, right_lines, k=15):
 
         similarities = []
 
-        # Compare with every line on the right file
+        # If the line is empty, put one dummy candidate
+        if left_lines[i].strip() == "":
+            result[i] = []
+            continue
+
         for j, rh in enumerate(right_hashes):
-
-            # Smaller distance means more similar
             dist = hamming_distance(lh, rh)
-
-            # Convert distance to a similarity score between 0 and 1
             score = 1 - (dist / 64)
-
-            # Save score + index of the right side line
             similarities.append((score, j))
 
-        # Sort by score (highest to lowest)
         similarities.sort(reverse=True)
-
-        # Choose only the top-k right-line indexes
         top_indexes = [idx for (_, idx) in similarities[:k]]
 
-        # Save to result dictionary
         result[i] = top_indexes
 
     return result       

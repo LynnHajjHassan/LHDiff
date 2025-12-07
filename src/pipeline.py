@@ -2,7 +2,7 @@
 #IMPORT STUFF-------------------
 
 # Preprocessing step: this normalizes each file (remove spaces, lowercase, strip comments, etc.)
-from preprocessing.preprocess import normalize_file
+from src.preprocessing.preprocess import normalize_file
 
 # Utilities (unchanged detection)
 # If the unchanged_diff module isn't ready yet, we use a dummy fallback.
@@ -15,23 +15,26 @@ except ImportError:
 
 # Similarity Part 1 (Noor's part)
 # These compute Levenshtein, cosine similarity, and build context windows.
-from similarity.similarity_part1.levenshtein import levenshtein
-from similarity.similarity_part1.cosine import cosine_similarity
-from similarity.similarity_part1.context import build_context
-from similarity.similarity_part1.combined_similarity import combined_similarity
+from src.similarity.similarity_part1.levenshtein import levenshtein
+from src.similarity.similarity_part1.cosine import cosine_similarity
+from src.similarity.similarity_part1.context import build_context
+from src.similarity.similarity_part1.combined_similarity import combined_similarity
+
 
 # Similarity Part 2 (Lynn's part)
 # This generates the top-k most similar candidates for each line using SimHash + Hamming.
-from similarity.similarity_part2.top_k import top_k_candidates
+from src.similarity.similarity_part2.top_k import top_k_candidates
 
 # Mapping (Parsia)
 # This takes similarity scores + top-k + unchanged matches and decides final mapping.
-from mapping.mapping import generate_mapping
+from src.mapping.mapping import generate_mapping
 
 # Split detection (Hanan)
 # This checks if one line on the left actually maps to multiple lines on the right.
-from split.split_detection import detect_splits
+from src.split.split_detection import detect_splits
 
+# Gui Part 
+from src.gui_output import runLineTracker
 
 
 # PIPELINE FUNCTION -------------------
@@ -71,6 +74,11 @@ def run_pipeline(old_file_path: str, new_file_path: str, top_k_value: int = 15):
     # This speeds up the mapping step a lot.
     top_k = top_k_candidates(left_lines, right_lines, k=top_k_value)
     print("Top-K candidates computed")
+    print("\nTop-K sample:", list(top_k.items())[:5])
+    print("type of top_k:", type(top_k))
+    print("Top-K size =", len(top_k), "Expected =", len(left_lines))
+
+
 
 
     print("\n=== 5) Mapping (Parsia) ===")
@@ -84,6 +92,16 @@ def run_pipeline(old_file_path: str, new_file_path: str, top_k_value: int = 15):
     final_mapping = detect_splits(left_lines, right_lines, single_mapping)
 
     print("\n=== PIPELINE FINISHED ===")
+    print("Final Mapping Output:")
+    print(final_mapping)
+
+    # Launch GUI Viewer
+    try:
+        print("\nOpening GUI window...")
+        runLineTracker(left_lines, right_lines, final_mapping)
+    except Exception as e:
+        print("GUI Error:", e)
+
     return final_mapping
 
 
@@ -94,6 +112,3 @@ if __name__ == "__main__":
     # TEMP TEST — this is just for us to test easily by running the file directly.
     # can replace these file paths with actual old/new files in /data/.
     result = run_pipeline("data/old/GamePanel_1.java", "data/new/GamePanel_2.java")
-
-    print("\nFinal Mapping Output:")
-    print(result)

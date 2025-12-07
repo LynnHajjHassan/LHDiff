@@ -58,7 +58,7 @@ def SplitLogic(
 #R1: here it is the ones at the right BUt the new thing is that it will store All the lines on the right ,the new file, normalized
 # mapping : here it will do the single map that i will have from the other team member Parsia code for the mapping process
 # and the benifit to this lines is to turn parsia's single-line mapping to allow the splits mapping where each left line can map to one or many right lines. 
-def SplitsDetector(
+def detect_splits(
     L1: List[str],
     R1: List[str],
     mapping: Dict[int, int],
@@ -71,13 +71,13 @@ def SplitsDetector(
         if l_idx < 0 or l_idx >= len(L1):
             continue
 
-        L1 = L1[l_idx]
+        line_text = L1[l_idx]
         #these i explained before at line 11-16
         new_indices = SplitLogic(
-            L1=L1,
+            L1=line_text,
             R1=R1,
             start=r_idx,
-            limit=10,  
+            limit=10,
             min=0.02
         )
         result[l_idx] = sorted(new_indices)
