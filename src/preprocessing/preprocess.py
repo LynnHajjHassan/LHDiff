@@ -7,6 +7,33 @@
 string_mode = False  # Global variable, allowing strings to be multi line
 comment_mode = False # Global variable, allowing comments like /* */ to be multi line
 
+def normalize_file_with_index_map(path: str):
+    """
+    Returns:
+      normalized_lines: list[str]
+      index_map: dict[int → int] mapping normalized index → raw index
+    """
+    normalize_list = []
+    index_map = {}
+
+    global string_mode, comment_mode
+    string_mode = False
+    comment_mode = False
+
+    with open(path) as f:
+        raw_lines = f.readlines()
+
+    norm_index = 0
+    for raw_index, raw_line in enumerate(raw_lines):
+        temp = normalize_line(raw_line, True)
+        if temp != "":
+            normalize_list.append(temp)
+            index_map[norm_index] = raw_index
+            norm_index += 1
+
+    return normalize_list, index_map
+
+
 
 def normalize_line(line: str, lowercase: bool) -> str:
     """ Method to normalize a line of text.

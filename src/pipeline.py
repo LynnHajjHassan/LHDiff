@@ -1,5 +1,7 @@
 
 #IMPORT STUFF-------------------
+import argparse
+import os
 
 # Preprocessing step: this normalizes each file (remove spaces, lowercase, strip comments, etc.)
 from src.preprocessing.preprocess import normalize_file
@@ -91,24 +93,84 @@ def run_pipeline(old_file_path: str, new_file_path: str, top_k_value: int = 15):
     # Detect if some lines were split into multiple lines in the new version
     final_mapping = detect_splits(left_lines, right_lines, single_mapping)
 
+    # 7) Evaluation (if GT exists)
+    # =============================
+    from utils.load_ground_truth import load_ground_truth
+    from utils.evaluate import evaluate
+    import os
+    gt_path = None
+    base_name = os.path.splitext(os.path.basename(old_file_path))[0]
+    base_name = base_name.replace("_1", "")  # GamePanel_1 -> GamePanel
+
+    candidate_gt = f"data/ground_truth/normalized/{base_name}_normalized.xml"
+
+    if os.path.exists(candidate_gt):
+        ground_truth = load_ground_truth(candidate_gt)
+
+        # IMPORTANT: evaluate only on GT-defined lines
+        filtered_pred = {
+            k: v for k, v in final_mapping.items()
+            if k in ground_truth
+        }
+
+        metrics = evaluate(filtered_pred, ground_truth)
+
+        print("\n=== 7) Evaluation Results ===")
+        print(metrics)
+    else:
+        print("\n(No ground truth found — skipping evaluation)")
+
+
+
     print("\n=== PIPELINE FINISHED ===")
     print("Final Mapping Output:")
     print(final_mapping)
 
-    # Launch GUI Viewer
-    try:
-        print("\nOpening GUI window...")
-        runLineTracker(left_lines, right_lines, final_mapping)
-    except Exception as e:
-        print("GUI Error:", e)
-
-    return final_mapping
+    return final_mapping, left_lines, right_lines
 
 
 
 # TESTING ENTRY POINT -------------------
 
 if __name__ == "__main__":
-    # TEMP TEST — this is just for us to test easily by running the file directly.
-    # can replace these file paths with actual old/new files in /data/.
-    result = run_pipeline("data/old/GamePanel_1.java", "data/new/GamePanel_2.java")
+    parser = argparse.ArgumentParser(
+        description="LHDiff Pipeline "
+    )
+
+    parser.add_argument(
+        "--old",
+        required=True,
+        help="Path to OLD source file"
+    )
+
+    parser.add_argument(
+        "--new",
+        required=True,
+        help="Path to NEW source file"
+    )
+
+    parser.add_argument(
+        "--gui",
+        action="store_true",
+        help="Launch GUI after processing"
+    )
+
+    args = parser.parse_args()
+
+    if not os.path.exists(args.old):
+        raise FileNotFoundError(f"Old file not found: {args.old}")
+
+    if not os.path.exists(args.new):
+        raise FileNotFoundError(f"New file not found: {args.new}")
+
+    final_mapping, left_lines, right_lines = run_pipeline(
+        args.old,
+        args.new
+    )
+
+    print("\nPIPELINE FINISHED")
+
+    if args.gui:
+        from src.gui_output import runLineTracker
+        print("Opening GUI window...")
+        runLineTracker(left_lines, right_lines, final_mapping)
