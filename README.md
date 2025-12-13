@@ -277,6 +277,17 @@ Potential extensions include:
 
 ---
 
+### Dependencies
+Install dependencies using:
+
+pip install -r requirements.txt
+
+Note:
+On Linux systems, tkinter may require manual installation:
+sudo apt install python3-tk
+
+---
+
 ## 13. How to Run
 
 ### Single File Pair
