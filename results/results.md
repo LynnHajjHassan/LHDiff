@@ -1,48 +1,96 @@
-# Evaluation of LHDiff
+# Evaluation Metrics and Experimental Setup
 
-## 1. Evaluation Setup
+## 1. Evaluation Overview
 
-We evaluate **LHDiff**, a line-based code differencing tool, by comparing its predicted line mappings against **normalized ground truth (GT)** mappings.
+The performance of **LHDiff** was evaluated by comparing the final predicted line mappings against **ground-truth (GT) mappings** for each file pair.
+Each predicted mapping was classified as:
 
-### Ground Truth
+* **Correct**: the predicted mapping exactly matches the ground truth
+* **Incorrect**: the predicted mapping points to the wrong target line
+* **Missed**: a ground-truth mapping was not produced by the system
+* **Spurious**: a mapping was predicted where no ground-truth mapping exists
 
-* Ground truth mappings are provided as XML files and normalized using our preprocessing pipeline.
-* Each GT file defines mappings from **old file line numbers** to **new file line numbers**.
-* Evaluation is performed **only on lines defined in the ground truth**, ensuring fairness.
+Using these outcomes, we compute **precision**, **recall**, and **F1-score** to quantify accuracy.
 
-### Metrics
+Evaluation was conducted on:
 
-We report the standard information retrieval metrics:
+1. **Real-world file pairs** with manually curated ground truth
+2. A **mutation-based dataset** designed to test specific edit patterns under controlled conditions
 
-* **Precision**: proportion of predicted mappings that are correct
-* **Recall**: proportion of ground truth mappings that were successfully found
-* **F1-score**: harmonic mean of precision and recall
 
-These metrics are computed using our custom `evaluate()` function.
 
----
+## 2. Ground Truth and Preprocessing
 
-## 2. Datasets Evaluated
+### 2.1 Real-World Ground Truth
 
-We evaluated LHDiff on a diverse set of real-world code examples across multiple languages, including:
+* Ground truth mappings are provided as XML files.
+* Each XML file defines mappings from **old file line numbers** to **new file line numbers**.
+* Ground truth files are **normalized** using the same preprocessing pipeline as the input source files to ensure consistency.
 
-* **Java** (e.g., `GamePanel`, `Server`, `Date`)
-* **Python** (e.g., `guessGame`, `random_data_library`)
+Evaluation is performed **only on lines explicitly defined in the ground truth**, preventing penalization for unmapped or ambiguous lines.
+
+
+
+### 2.2 Mutation-Based Ground Truth
+
+To evaluate LHDiff under controlled transformations, we use a **mutation-based dataset** consisting of:
+
+* One original source file
+* Multiple mutated versions, each applying a **single edit type**
+
+Supported mutation types include:
+
+* `insert`
+* `delete`
+* `modify`
+* `rename`
+* `split`
+* `merge`
+* `move`
+* `whitespace`
+
+Ground truth for the mutation dataset specifies how original line numbers should map to mutated line numbers after each transformation.
+
+
+
+## 3. Evaluation Metrics
+
+We report the following standard information retrieval metrics:
+
+* **Precision**
+  Proportion of predicted mappings that are correct.
+
+* **Recall**
+  Proportion of ground-truth mappings that were successfully recovered.
+
+* **F1-Score**
+  Harmonic mean of precision and recall.
+
+All metrics are computed using a custom `evaluate()` function applied consistently across datasets.
+
+
+
+## 4. Datasets Evaluated
+
+LHDiff was evaluated on approximately **25 real file pairs** spanning multiple programming languages:
+
+* **Java** (e.g., `GamePanel`, `Date`, `Server`)
+* **Python** (e.g., `random_data_library`, `guessGame`)
 * **C** (e.g., `game`, `proc`)
 * **JavaScript** (e.g., `js-array`, `localStorage`)
 * **PHP** (e.g., `cart`, `login`)
 
-The datasets vary in:
+The datasets vary significantly in:
 
-* size (small scripts to large source files),
-* amount of change (minor edits vs major restructuring),
-* language syntax and style.
+* file size (small scripts to large source files),
+* degree of change (minor edits to major restructuring),
+* coding style and language syntax.
 
----
 
-## 3. Quantitative Results
 
-The table below summarizes representative evaluation results.
+## 5. Quantitative Results on Real-World Files
+
+Representative evaluation results are shown below.
 
 | Dataset             | Language   | Precision | Recall | F1   |
 | ------------------- | ---------- | --------- | ------ | ---- |
@@ -55,92 +103,99 @@ The table below summarizes representative evaluation results.
 | js-array            | JavaScript | 1.00      | 1.00   | 1.00 |
 | urldecoder          | Java       | 1.00      | 1.00   | 1.00 |
 
----
 
-## 4. Result Analysis
 
-### 4.1 Precision vs Recall
+## 6. Mutation-Based Evaluation Results
 
-Across most datasets, **precision is consistently high**, often reaching 1.0.
-This indicates that when LHDiff reports a mapping, it is usually correct.
+Mutation-based testing evaluates LHDiff’s robustness under controlled edit patterns.
 
-Recall varies depending on the dataset:
+### 6.1 Observed Behavior
 
-* **Higher recall** is observed in files with limited restructuring and consistent formatting.
-* **Lower recall** appears in cases with extensive line insertions, deletions, or large structural changes.
+* **Insert / Delete**
+  LHDiff maintains high precision, correctly aligning unchanged lines while shifting indices appropriately.
 
-This reflects a **conservative design choice**: LHDiff prioritizes correctness over aggressive matching.
+* **Modify / Rename**
+  Performance remains strong when textual similarity is preserved.
 
----
+* **Split / Merge**
+  These transformations are more challenging.
+  Split detection improves correctness in some cases, but recall decreases under aggressive restructuring.
 
-### 4.2 Impact of Code Structure
+* **Move**
+  Line relocation is partially handled through similarity and context, though recall varies depending on surrounding changes.
 
-LHDiff performs best on:
+* **Whitespace**
+  Whitespace-only changes are largely ignored due to normalization, which is a deliberate design choice.
 
-* structured code,
-* moderate edits,
-* refactorings that preserve textual similarity.
+### 6.2 Interpretation
 
-Lower performance is observed in:
+Mutation testing demonstrates that LHDiff behaves **consistently and predictably** across different edit types, with performance degrading gracefully as transformations become more complex.
 
-* heavily reorganized files,
-* generated or templated code,
-* cases where semantic similarity does not align with textual similarity.
 
----
 
-### 4.3 Split Detection
+## 7. Precision–Recall Tradeoff
 
-Split detection enables LHDiff to identify cases where a single line in the old version maps to multiple lines in the new version.
-This improves accuracy in cases involving line expansions, although such mappings remain challenging under heavy restructuring.
+Across both real-world and mutation-based datasets, **precision is consistently higher than recall**.
 
----
+This reflects a **conservative design philosophy**:
 
-## 5. Qualitative Evaluation (GUI)
+* LHDiff prioritizes correctness of reported mappings
+* Ambiguous matches are avoided rather than guessed
 
-For datasets without ground truth, we performed **qualitative inspection** using the LHDiff GUI.
+As a result:
 
-The GUI allows:
+* False positives are rare
+* Some true mappings may be missed under heavy restructuring
+
+This tradeoff is appropriate for applications where **incorrect mappings are more harmful than missing mappings**.
+
+
+
+## 8. Qualitative Evaluation (GUI)
+
+For datasets without ground truth, qualitative evaluation was performed using the LHDiff GUI.
+
+The GUI provides:
 
 * side-by-side visualization of old and new files,
-* highlighting of mapped lines,
-* manual inspection of correctness.
+* highlighted line mappings,
+* interactive inspection of detected matches.
 
-Visual inspection confirms that many unchanged or slightly modified lines are correctly tracked even when quantitative evaluation is unavailable.
+Manual inspection confirms that many unchanged or lightly modified lines are correctly tracked even when quantitative evaluation is unavailable.
 
----
 
-## 6. Limitations
+
+## 9. Limitations
 
 While LHDiff performs well overall, several limitations remain:
 
-* Recall decreases under extreme restructuring.
-* The approach relies primarily on textual similarity rather than semantic understanding.
-* Ground truth coverage varies across datasets, affecting evaluation consistency.
+* Recall decreases under extreme restructuring
+* Similarity is primarily textual rather than semantic
+* Split and merge cases remain challenging in complex edits
 
-These limitations suggest opportunities for future improvement.
+These limitations motivate future improvements.
 
----
 
-## 7. Summary
+
+## 10. Summary
 
 Overall, LHDiff demonstrates:
 
-* **high precision** across diverse datasets,
-* **robust performance** on moderately changing code,
+* high precision across diverse datasets,
+* robust performance on moderately changing code,
 * effective handling of multiple programming languages,
-* practical usability through GUI-based inspection.
+* reliable behavior under controlled mutation testing.
 
-These results validate LHDiff as a reliable and extensible line-tracking tool for code evolution analysis.
+These results validate LHDiff as a practical and extensible line-tracking system for code evolution analysis.
 
----
 
-## 8. Future Work
 
-Potential improvements include:
+## 11. Future Work
 
-* incorporating semantic embeddings for similarity,
-* improving recall for heavily restructured code,
-* refining split and merge detection,
-* expanding evaluation datasets.
+Potential directions include:
+
+* semantic similarity using embeddings or ASTs,
+* improved handling of large-scale refactoring,
+* expanded mutation datasets,
+* finer-grained split and merge detection.
 
