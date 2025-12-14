@@ -3,6 +3,7 @@
 import argparse
 import os
 
+
 # Preprocessing step: this normalizes each file (remove spaces, lowercase, strip comments, etc.)
 from src.preprocessing.preprocess import normalize_file
 
@@ -89,11 +90,51 @@ def run_pipeline(old_file_path: str, new_file_path: str, top_k_value: int = 15):
     print(f"Mapping generated for {len(single_mapping)} left lines")
 
 
+
     print("\n=== 6) Split Detection (Hanan) ===")
     # Detect if some lines were split into multiple lines in the new version
     final_mapping = detect_splits(left_lines, right_lines, single_mapping)
 
-    # 7) Evaluation (if GT exists)
+
+     # Bonus mark 
+    # =============================
+    from utils.bug_classifier import classify_change
+    print("\n=== 6.5) Bug Change Classification (BONUS) ===")
+
+    bug_labels = classify_change(
+        old_lines=left_lines,
+        new_lines=right_lines,
+        mapping=final_mapping
+    )
+
+    # Print a readable summary
+    counts = {"bug-fix": 0, "bug-introducing": 0, "neutral": 0}
+    for label in bug_labels.values():
+        counts[label] += 1
+
+    # Include deleted lines explicitly
+    for i in range(len(left_lines)):
+        if i not in final_mapping:
+            final_mapping[i] = []
+
+    print("Bug classification summary:")
+    for k, v in counts.items():
+        print(f"  {k}: {v}")
+
+    print("\nSample classified changes (first 10):")
+    for i, (l_idx, label) in enumerate(bug_labels.items()):
+        if i >= 10:
+            break
+        old_line = left_lines[l_idx]
+        mapped = final_mapping.get(l_idx, [])
+        new_line = right_lines[mapped[0]] if mapped else "(deleted)"
+        print(f"L{l_idx+1}: {label}")
+        print(f"  OLD: {old_line}")
+        print(f"  NEW: {new_line}")
+
+
+
+    # Evaluation (if GT exists)
     # =============================
     from utils.load_ground_truth import load_ground_truth
     from utils.evaluate import evaluate
@@ -119,7 +160,6 @@ def run_pipeline(old_file_path: str, new_file_path: str, top_k_value: int = 15):
         print(metrics)
     else:
         print("\n(No ground truth found — skipping evaluation)")
-
 
 
     print("\n=== PIPELINE FINISHED ===")

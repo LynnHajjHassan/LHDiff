@@ -77,6 +77,7 @@ LHDiff/
 │   ├── load_ground_truth.py
 │   ├── load_mutation_ground_truth.py
 │   ├── run_all.py                  # Batch evaluation (real files)
+│   ├── bug_classifer.py            # bonus mark part 
 │   └── run_mutations.py            # Mutation-based evaluation
 │
 ├── data/
@@ -267,7 +268,66 @@ The GUI enables **qualitative validation** when ground truth is unavailable.
 
 ---
 
-## 12. Future Work
+## 12. Bonus Feature: Bug Change Classification
+
+As an extension to LHDiff, we implemented a heuristic-based bug change
+classifier that analyzes detected line mappings and categorizes changes as:
+
+- **bug-fix**
+- **bug-introducing**
+- **neutral**
+
+### Motivation
+
+Line-level differencing tools often identify *what* changed but not *why*
+it changed. This bonus feature aims to provide lightweight semantic insight
+by identifying changes that are potentially related to bug fixes or bug
+introductions.
+
+### Approach
+
+The classifier operates after line mapping and split detection and uses:
+
+- mapping structure:
+  - deleted lines
+  - one-to-one modifications
+  - one-to-many splits
+- keyword-based heuristics for safety-related logic
+- conservative labeling to avoid false positives
+
+### Classification Rules
+
+- **Bug-fix**
+  - insertion or split introducing safety-related logic
+  - modified lines adding validation or error checks
+
+- **Bug-introducing**
+  - deletion of safety-related logic
+  - removal of validation checks
+
+- **Neutral**
+  - formatting changes
+  - refactorings without safety impact
+  - non-critical logic edits
+
+### Results
+
+In mutation-based tests, most changes were classified as **neutral**, which
+reflects the conservative nature of the heuristic design. This behavior
+reduces false bug classifications and aligns with realistic code evolution,
+where most edits are not bug-related.
+
+### Limitations
+
+- The classifier relies on textual heuristics rather than semantic analysis
+- Complex bug patterns may not be detected
+- Intended as an extensible foundation rather than a definitive bug oracle
+
+Despite these limitations, the feature demonstrates how LHDiff can be
+extended beyond structural differencing into change interpretation.
+
+
+## 13. Future Work
 
 Potential extensions include:
 
@@ -290,7 +350,7 @@ sudo apt install python3-tk
 
 ---
 
-## 13. How to Run
+## 14. How to Run
 
 ### Single File Pair
 
@@ -316,7 +376,7 @@ python utils/run_mutations.py
 
 ---
 
-## 14. Summary
+## 15. Summary
 
 LHDiff is a **robust, extensible, and language-independent** line tracking tool that:
 
