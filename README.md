@@ -255,6 +255,8 @@ LHDiff includes a GUI that supports:
 
 The GUI enables **qualitative validation** when ground truth is unavailable.
 
+![demo photo](demo.png)
+
 ---
 
 ## 11. Limitations
